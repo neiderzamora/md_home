@@ -1,5 +1,5 @@
 from django.db import models
-from apps.users.models.models import PatientUser, DoctorUser
+from apps.users.models import PatientUser, DoctorUser
 from apps.service_address.models import ServiceAddress
 from apps.service_end.models import ServiceEnd
 import uuid
