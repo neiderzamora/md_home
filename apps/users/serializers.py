@@ -19,6 +19,7 @@ class PatientUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientUser
         fields = '__all__'
+        
     
     def validate(self, data):
         if data['password'] != data['password2']:
@@ -74,3 +75,7 @@ class DoctorUserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    password = serializers.CharField()

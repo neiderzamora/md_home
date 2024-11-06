@@ -53,10 +53,13 @@ def validate_birthdate(value):
     return value
 
 def validate_phone_number(value):
-    regex_validator = RegexValidator(
-        regex=r'^\d{10}$',
-        message="El número de teléfono debe contener exactamente 10 dígitos."
-    )
-    regex_validator(value)
+    if len(value) < 9:
+        raise serializers.ValidationError("El número de telefono solo debe contener 10 caracteres.")
     
     return value
+
+    regex_validator = RegexValidator(
+        regex=r'^\d+$',
+        message="El número de telefono solo debe contener números."
+    )
+    regex_validator(value)

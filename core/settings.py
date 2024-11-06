@@ -1,4 +1,6 @@
 from pathlib import Path
+import datetime
+from datetime import timedelta
 import os
 import environ
 import dj_database_url
@@ -33,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     
     'apps.service_address',
     'apps.service_end',
@@ -51,6 +55,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
 
 ROOT_URLCONF = 'core.urls'
 
@@ -77,9 +90,8 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(default=env('DATABASE_MYSQL'))
+    'default': dj_database_url.config(default=env('DATABASE_URL'))
 }
-
 
 
 # Password validation
@@ -125,3 +137,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Model user
 AUTH_USER_MODEL = 'users.SuperUserHDHome'
+
+# Token JWT
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": False,
+
+    "ALGORITHM": "HS256",
+
+    "AUTH_HEADER_TYPES": ("Bearer", "JWT",)
+}
