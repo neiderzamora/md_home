@@ -10,16 +10,27 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import PatientUser, DoctorUser
 from apps.users.serializers import PatientUserSerializer, DoctorUserSerializer, LoginSerializer
+from apps.users.permissions import CanEditDoctor, CanViewDoctor, CanEditPatient, CanViewPatient
 
 class PatientUserViewSet(viewsets.ModelViewSet):
     queryset = PatientUser.objects.all()
     serializer_class = PatientUserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanViewPatient, CanEditPatient]
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return super().get_permissions()
 
 class DoctorUserViewSet(viewsets.ModelViewSet):
     queryset = DoctorUser.objects.all()
     serializer_class = DoctorUserSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticated, CanViewDoctor, CanEditDoctor]
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return super().get_permissions()
 
 class ManualTokenObtainView(APIView):
     """ Token JWT """

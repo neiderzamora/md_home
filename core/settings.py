@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'rest_framework',
+    'django_extensions',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     
@@ -135,9 +136,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Model user
-AUTH_USER_MODEL = 'users.SuperUserHDHome'
+AUTH_USER_MODEL = 'users.User'
 
-# Token JWT
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -147,5 +147,13 @@ SIMPLE_JWT = {
 
     "ALGORITHM": "HS256",
 
-    "AUTH_HEADER_TYPES": ("Bearer", "JWT",)
+    "AUTH_HEADER_TYPES": ("Bearer", "JWT",),
+
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+
+    "JTI_CLAIM": "jti",
 }
