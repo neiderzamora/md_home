@@ -1,17 +1,9 @@
 from rest_framework import permissions
 
-class CanViewPatient(permissions.BasePermission):
+class IsPatient(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.has_perm('users.can_view_patient')
+        return request.user.groups.filter(name='Patients').exists()
 
-class CanEditPatient(permissions.BasePermission):
+class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.has_perm('users.can_edit_patient')
-
-class CanViewDoctor(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.has_perm('users.can_view_doctor')
-
-class CanEditDoctor(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.has_perm('users.can_edit_doctor')
+        return request.user.groups.filter(name='Doctors').exists()

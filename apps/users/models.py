@@ -1,5 +1,5 @@
 import uuid
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group
 from django.db import models
 
 class CustomUserManager(BaseUserManager):
@@ -38,12 +38,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     groups = models.ManyToManyField(
         'auth.Group',
-        related_name='superuser_groups',
         blank=True
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
-        related_name='superuser_permissions',
         blank=True
     )
 
@@ -91,6 +89,11 @@ class PatientUser(User):
         permissions = [
             ('can_edit_patientuser', 'Can edit patient user'),
         ]
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        patient_group, created = Group.objects.get_or_create(name='Patients')
+        self.groups.add(patient_group)
 
 class DoctorUser(User):
     IDENTIFICATION_TYPE = [
@@ -122,3 +125,8 @@ class DoctorUser(User):
         permissions = [
             ('can_edit_doctoruser', 'Can edit doctor user'),
         ]
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        patient_group, created = Group.objects.get_or_create(name='Doctors')
+        self.groups.add(patient_group)

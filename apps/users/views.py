@@ -1,36 +1,41 @@
-from django.contrib.auth import authenticate
-from rest_framework import viewsets, status
-from rest_framework.response import Response
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
-
-from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import PatientUser, DoctorUser
 from apps.users.serializers import PatientUserSerializer, DoctorUserSerializer, LoginSerializer
-from apps.users.permissions import CanEditDoctor, CanViewDoctor, CanEditPatient, CanViewPatient
+from apps.users.permissions import IsPatient, IsDoctor
 
-class PatientUserViewSet(viewsets.ModelViewSet):
+class BaseUserViewSet(viewsets.ModelViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsAdminUser()]
+        return super().get_permissions()
+
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return Response({'error': 'No tiene permiso para eliminar usuarios'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+class PatientUserViewSet(BaseUserViewSet):
     queryset = PatientUser.objects.all()
     serializer_class = PatientUserSerializer
-    permission_classes = [IsAuthenticated, CanViewPatient, CanEditPatient]
+    permission_classes = [IsAuthenticated, IsPatient | IsAdminUser]
 
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        return super().get_permissions()
-
-class DoctorUserViewSet(viewsets.ModelViewSet):
+class DoctorUserViewSet(BaseUserViewSet):
     queryset = DoctorUser.objects.all()
     serializer_class = DoctorUserSerializer
-    permission_classes = [IsAuthenticated, CanViewDoctor, CanEditDoctor]
-
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        return super().get_permissions()
+    permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
 
 class ManualTokenObtainView(APIView):
     """ Token JWT """
