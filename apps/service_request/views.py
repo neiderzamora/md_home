@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
+from django.utils import timezone
+from datetime import timedelta
+import threading
 
 from apps.service_end.models import ServiceEnd
 from apps.users.models import PatientUser, DoctorUser
@@ -15,16 +18,34 @@ from apps.users.permissions import IsPatient, IsDoctor
 from apps.service_request.filters import PatientServiceRequestFilter, DoctorServiceResponseFilter
 
 """ Patient view """
+def delete_unaccepted_request(service_request_id):
+    try:
+        service_request = PatientServiceRequest.objects.get(id=service_request_id, status='PENDIENTE')
+        service_request.delete()
+    except PatientServiceRequest.DoesNotExist:
+        pass
+
 class PatientServiceRequestCreateView(generics.CreateAPIView):
     queryset = PatientServiceRequest.objects.all()
     serializer_class = PatientServiceRequestSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsPatient | IsAdminUser]
 
-    def perform_create(self, serializer):
-        if not hasattr(self.request.user, 'patientuser'):
-            raise serializers.ValidationError({'error': 'El usuario autenticado no es un paciente'})
-        serializer.save(patient=self.request.user.patientuser)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service_request = serializer.save(patient=self.request.user.patientuser)
+        
+        # Programar la eliminación de la solicitud si no es aceptada en 30 minutos
+        timer = threading.Timer(30 * 60, delete_unaccepted_request, [service_request.id])
+        timer.start()
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response({
+            'status': 'La solicitud de servicio ha sido creada',
+            'message': 'Si la solicitud no es aceptada será eliminada en 30 minutos, vuelve a crear otra',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED, headers=headers)
 
 class PatientServiceRequestListView(generics.ListAPIView):
     serializer_class = PatientServiceRequestSerializer
@@ -46,9 +67,29 @@ class PatientServiceRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return PatientServiceRequest.objects.filter(patient=self.request.user.patientuser)
 
-    def perform_destroy(self, instance):
+    def patch(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'status': 'La solicitud de servicio ha sido actualizada',
+            'message': 'La solicitud de servicio ha sido actualizada correctamente',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
         if instance.status != 'PENDIENTE':
-            raise serializers.ValidationError({'error': 'No se puede eliminar una solicitud que ya ha sido aceptada por un doctor'})
+            return Response({'error': 'No se puede eliminar una solicitud que ya ha sido aceptada por un doctor'}, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_destroy(instance)
+        return Response({
+            'status': 'La solicitud de servicio ha sido eliminada',
+            'message': 'La solicitud de servicio ha sido eliminada correctamente'
+        }, status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
         instance.delete()
 
 class AllServiceRequestDetailView(generics.RetrieveAPIView):
@@ -64,7 +105,7 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         if not hasattr(self.request.user, 'doctoruser'):
             return Response({'error': 'El usuario autenticado no es un doctor'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -78,11 +119,18 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
         if existing_response:
             return Response({'error': 'Ya existe una respuesta para esta solicitud de servicio'}, status=status.HTTP_400_BAD_REQUEST)
         
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         serializer.save(doctor=self.request.user.doctoruser, service_request=service_request)
         service_request.status = 'ACEPTADA Y EN CAMINO'
         service_request.save()
         
-        return Response({'status': 'La solicitud de servicio ha sido aceptada'}, status=status.HTTP_201_CREATED)
+        headers = self.get_success_headers(serializer.data)
+        return Response({
+            'status': 'La solicitud de servicio ha sido aceptada',
+            'message': 'El doctor ha aceptado la solicitud y está en camino',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED, headers=headers)
 
 class DoctorServiceResponseListView(generics.ListAPIView):
     serializer_class = DoctorServiceResponseSerializer
@@ -115,11 +163,13 @@ class DoctorMarkArrivalView(generics.UpdateAPIView):
         except DoctorServiceResponse.DoesNotExist:
             return Response({'error': 'No DoctorServiceResponse matches the given query.'}, status=status.HTTP_404_NOT_FOUND)
         
-        #instance.status = 'LG'
-        #instance.save()
         service_request.status = 'LLEGADA AL DOMICILIO'
         service_request.save()
-        return Response({'status': f'El doctor {instance.doctor.first_name} {instance.doctor.last_name} ha llegado a la dirección'}, status=status.HTTP_200_OK)
+        return Response({
+            'status': 'El doctor ha llegado a la dirección',
+            'message': f'El doctor {instance.doctor.first_name} {instance.doctor.last_name} ha llegado a la dirección',
+            'data': DoctorServiceResponseSerializer(instance).data
+        }, status=status.HTTP_200_OK)
 
 class DoctorServiceResponseDetailView(generics.RetrieveAPIView):
     queryset = DoctorServiceResponse.objects.all()
@@ -137,17 +187,17 @@ class ServiceEndCreateView(generics.CreateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         try:
             service_request = PatientServiceRequest.objects.get(pk=self.kwargs['pk'])
         except PatientServiceRequest.DoesNotExist:
-            return Response({'error': 'No PatientServiceRequest matches the given query.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Ninguna solicitud de servicio coincide con la consulta proporcionada.'}, status=status.HTTP_404_NOT_FOUND)
         
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         service_end = serializer.save(service_request=service_request)
         
-        # Actualizar el estado de PatientServiceRequest a "completado"
-        service_response = DoctorServiceResponse.objects.get(service_request=service_request)
-        
+        # Actualizar el estado de PatientServiceRequest a "COMPLETADA"
         service_request.status = 'COMPLETADA'
         service_request.save()
         
@@ -161,7 +211,14 @@ class ServiceEndCreateView(generics.CreateAPIView):
             patient=service_request.patient,
             doctor=doctor_service_response.doctor
         )
-
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response({
+            'status': 'El servicio ha sido completado',
+            'message': 'El servicio ha sido completado y los detalles han sido guardados',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED, headers=headers)
+        
 """ ServiceRequestDetail view """
 class PatientServiceRequestDListView(generics.ListAPIView):
     serializer_class = ServiceRequestDetailSerializer

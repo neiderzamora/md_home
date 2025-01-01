@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     PatientServiceRequestCreateView,
     #PatientServiceRequestListView,
-    #PatientServiceRequestDetailView,
+    PatientServiceRequestDetailView,
     #AllServiceRequestDetailView,
     
     DoctorServiceResponseCreateView,
@@ -21,7 +21,7 @@ urlpatterns = [
     # patient
     path('patient/service_request/new/', PatientServiceRequestCreateView.as_view(), name='create_service_request'),
     #path('patient/service_request/list/', PatientServiceRequestListView.as_view(), name='list_service_requests'),
-    #path('patient/service_request/<uuid:pk>/', PatientServiceRequestDetailView.as_view(), name='detail_service_request'),
+    path('patient/service_request/<uuid:pk>/', PatientServiceRequestDetailView.as_view(), name='detail_service_request'),
     
     # doctor
     path('doctor/service_request/<uuid:pk>/respond/', DoctorServiceResponseCreateView.as_view(), name='respond_service_request'),
