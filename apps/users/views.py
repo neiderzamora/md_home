@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
@@ -37,7 +37,9 @@ class DoctorUserViewSet(BaseUserViewSet):
     serializer_class = DoctorUserSerializer
     permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
 
-class ManualTokenObtainView(APIView):
+class ManualToken(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
     """ Token JWT """
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
