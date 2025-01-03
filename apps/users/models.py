@@ -61,8 +61,15 @@ class PatientUser(User):
         ('CE', 'CEDULA DE EXTRANJERIA'),
     ]
     
+    GENDER_TYPE = [
+        ('M', 'MASCULINO'),
+        ('F', 'FEMENINO'),
+        ('O', 'OTRO')
+    ]
+    
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default='CC')
     identification_number = models.CharField(max_length=20, null=False, blank=False)
+    gender = models.CharField(max_length=30, choices=GENDER_TYPE, default='M')
     birthdate = models.DateField()
     phone_number = models.CharField(max_length=50, unique=True, null=False, blank=False)
     address_departament = models.CharField(max_length=256, default='META')
@@ -101,9 +108,16 @@ class DoctorUser(User):
         ('PS', 'PASAPORTE'),
         ('CE', 'CEDULA DE EXTRANJERIA'),
     ]
+
+    GENDER_TYPE = [
+        ('M', 'MASCULINO'),
+        ('F', 'FEMENINO'),
+        ('O', 'OTRO')
+    ]    
     
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default='CC')
     identification_number = models.CharField(max_length=20, null=False, blank=False)
+    gender = models.CharField(max_length=30, choices=GENDER_TYPE, default='M')
     birthdate = models.DateField()
     phone_number = models.CharField(max_length=50, unique=True, null=False, blank=False)
     address_departament = models.CharField(max_length=256, default='META')

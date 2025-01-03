@@ -1,5 +1,6 @@
 from django.core.validators import RegexValidator
 from rest_framework import serializers
+from apps.users.models import PatientUser, DoctorUser
 from datetime import datetime, date
 
 def validator_password(value):
@@ -53,13 +54,17 @@ def validate_birthdate(value):
     return value
 
 def validate_phone_number(value):
-    if len(value) < 9:
-        raise serializers.ValidationError("El número de telefono solo debe contener 10 caracteres.")
+    if len(value) != 10:
+        raise serializers.ValidationError("El número de teléfono debe contener 10 caracteres.")
     
-    return value
-
     regex_validator = RegexValidator(
         regex=r'^\d+$',
-        message="El número de telefono solo debe contener números."
+        message="El número de teléfono solo debe contener números."
     )
     regex_validator(value)
+    
+    # Verificar si el número de teléfono ya existe en la base de datos
+    if PatientUser.objects.filter(phone_number=value).exists() or DoctorUser.objects.filter(phone_number=value).exists():
+        raise serializers.ValidationError("El número de teléfono ya está en uso.")
+    
+    return value
