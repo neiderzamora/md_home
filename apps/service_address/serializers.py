@@ -7,9 +7,10 @@ class ServiceAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceAddress
         fields = '__all__'
+        read_only_fields = ['patient', 'created_at']
 
     def validate(self, data):
         if data.get('is_default', False):
             # Asegurarse de que solo una dirección sea predeterminada por usuario
-            ServiceAddress.objects.filter(patient=data['patient'], is_default=True).update(is_default=False)
+            ServiceAddress.objects.filter(patient=self.context['request'].user, is_default=True).update(is_default=False)
         return data

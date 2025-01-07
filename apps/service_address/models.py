@@ -7,6 +7,7 @@ class ServiceAddress(models.Model):
     patient = models.ForeignKey(PatientUser, on_delete=models.CASCADE, related_name='services_address')
     departament = models.CharField(max_length=256, default='META')
     city = models.CharField(max_length=256, default='VILLAVICENCIO')
+    neighborhood = models.CharField(max_length=256, null=False, blank=False)
     line_address = models.CharField(max_length=256, null=False, blank=False)
     description = models.TextField(max_length=256, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -17,3 +18,6 @@ class ServiceAddress(models.Model):
             # Desmarcar otras direcciones predeterminadas del mismo usuario
             ServiceAddress.objects.filter(patient=self.patient, is_default=True).update(is_default=False)
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.line_address}, {self.neighborhood}, {self.city}, {self.departament}"
