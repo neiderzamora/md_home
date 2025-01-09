@@ -1,11 +1,12 @@
-from rest_framework import viewsets, generics
+from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.exceptions import ValidationError
+from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.users.models import PatientUser, DoctorUser
 from apps.users.serializers import PatientUserSerializer, DoctorUserSerializer, LoginSerializer
@@ -31,11 +32,17 @@ class PatientUserViewSet(BaseUserViewSet):
     queryset = PatientUser.objects.all()
     serializer_class = PatientUserSerializer
     permission_classes = [IsAuthenticated, IsPatient | IsAdminUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id', 'email']
+    pagination_class = None
 
 class DoctorUserViewSet(BaseUserViewSet):
     queryset = DoctorUser.objects.all()
     serializer_class = DoctorUserSerializer
     permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id', 'email']
+    pagination_class = None
 
 class ManualToken(generics.GenericAPIView):
     permission_classes = [AllowAny]
