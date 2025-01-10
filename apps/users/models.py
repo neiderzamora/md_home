@@ -62,14 +62,14 @@ class PatientUser(User):
     ]
     
     GENDER_TYPE = [
-        ('M', 'MASCULINO'),
-        ('F', 'FEMENINO'),
+        ('MASCULINO', 'MASCULINO'),
+        ('FEMENINO', 'FEMENINO'),
         ('O', 'OTRO')
     ]
     
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default='CC')
     identification_number = models.CharField(max_length=20, null=False, blank=False)
-    gender = models.CharField(max_length=30, choices=GENDER_TYPE, default='M')
+    gender = models.CharField(max_length=30, choices=GENDER_TYPE, default='MASCULINO')
     birthdate = models.DateField()
     phone_number = models.CharField(max_length=50, unique=True, null=False, blank=False)
     address_departament = models.CharField(max_length=256, default='META')

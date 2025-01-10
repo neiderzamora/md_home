@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     PatientServiceRequestCreateView,
-    #PatientServiceRequestListView,
+    PatientServiceRequestListView,
     PatientServiceRequestDetailView,
     #AllServiceRequestDetailView,
     
@@ -15,12 +15,14 @@ from .views import (
     PatientServiceRequestDListView,
     DoctorServiceResponseDView,
     DoctorServiceResponseDListView,
+    
+    PendingServiceRequestListView
 )
 
 urlpatterns = [
     # patient
     path('patient/service_request/new/', PatientServiceRequestCreateView.as_view(), name='create_service_request'),
-    #path('patient/service_request/list/', PatientServiceRequestListView.as_view(), name='list_service_requests'),
+    path('patient/service_request/list/', PatientServiceRequestListView.as_view(), name='list_service_requests'),
     path('patient/service_request/<uuid:pk>/', PatientServiceRequestDetailView.as_view(), name='detail_service_request'),
     
     # doctor
@@ -38,4 +40,6 @@ urlpatterns = [
     path('patient/service_request/detail/<uuid:pk>/', PatientServiceRequestDView.as_view(), name='detail_patient_service_request_detail'),
     path('doctor/service_request/detail/', DoctorServiceResponseDListView.as_view(), name='list_doctor_service_response_detail'),
     path('doctor/service_request/detail/<uuid:pk>/', DoctorServiceResponseDView.as_view(), name='detail_doctor_service_response_detail'),
+    
+     path('service_requests/pending/', PendingServiceRequestListView.as_view(), name='list_pending_service_requests'),
 ]

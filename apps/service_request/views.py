@@ -255,3 +255,16 @@ class DoctorServiceResponseDView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return ServiceRequestDetail.objects.filter(doctor=self.request.user.doctoruser)
+    
+""" Pending service request view """
+class PendingServiceRequestListView(generics.ListAPIView):
+    """
+    Vista para listar todas las solicitudes de servicio con estado 'PENDIENTE'.
+    """
+    queryset = PatientServiceRequest.objects.filter(status='PENDIENTE')
+    serializer_class = PatientServiceRequestSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PatientServiceRequestFilter
+    pagination_class = PageNumberPagination
