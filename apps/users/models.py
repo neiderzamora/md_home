@@ -64,7 +64,7 @@ class PatientUser(User):
     GENDER_TYPE = [
         ('MASCULINO', 'MASCULINO'),
         ('FEMENINO', 'FEMENINO'),
-        ('O', 'OTRO')
+        ('OTRO', 'OTRO')
     ]
     
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default='CC')
@@ -110,9 +110,9 @@ class DoctorUser(User):
     ]
 
     GENDER_TYPE = [
-        ('M', 'MASCULINO'),
-        ('F', 'FEMENINO'),
-        ('O', 'OTRO')
+        ('MASCULINO', 'MASCULINO'),
+        ('FEMENINO', 'FEMENINO'),
+        ('OTRO', 'OTRO')
     ]    
     
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default='CC')

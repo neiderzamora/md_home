@@ -2,6 +2,8 @@ from rest_framework import serializers
 from apps.users.models import PatientUser, DoctorUser
 from .validators import validator_password, validate_names, validate_identification, validate_birthdate, validate_phone_number
 
+from datetime import date
+
 class PatientUserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(validators=[validate_names])
     last_name = serializers.CharField(validators=[validate_names])
@@ -11,14 +13,20 @@ class PatientUserSerializer(serializers.ModelSerializer):
         format="%d/%m/%Y",
         input_formats=["%d/%m/%Y"]
     )
-    #phone_number = serializers.CharField(validators=[validate_phone_number])
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'}, validators=[validator_password])
     password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
     created_at = serializers.DateTimeField(format='%Y-%m-%e %H:%M', read_only=True)
     
+    age = serializers.SerializerMethodField()
+    
     class Meta:
         model = PatientUser
         fields = '__all__'
+    
+    def get_age(self, obj):
+        today = date.today()
+        age = today.year - obj.birthdate.year - ((today.month, today.day) < (obj.birthdate.month, obj.birthdate.day))
+        return age
 
     def validate_phone_number(self, value):
         # Validación de longitud
@@ -71,14 +79,20 @@ class DoctorUserSerializer(serializers.ModelSerializer):
         format="%d/%m/%Y",
         input_formats=["%d/%m/%Y"]
     )
-    #phone_number = serializers.CharField(validators=[validate_phone_number])
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'}, validators=[validator_password])
     password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
     created_at = serializers.DateTimeField(format='%Y-%m-%e %H:%M', read_only=True)
     
+    age = serializers.SerializerMethodField()
+    
     class Meta:
         model = DoctorUser
         fields = '__all__'
+        
+    def get_age(self, obj):
+        today = date.today()
+        age = today.year - obj.birthdate.year - ((today.month, today.day) < (obj.birthdate.month, obj.birthdate.day))
+        return age
 
     def validate_phone_number(self, value):
         # Validación de longitud

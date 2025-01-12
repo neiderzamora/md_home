@@ -12,6 +12,7 @@ class ServiceEndSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceEnd
         fields = '__all__'
+        read_only_fields = ['end_time', 'service_request']
 
 class PatientServiceRequestSerializer(serializers.ModelSerializer):
     patient = PatientUserSerializer(read_only=True)

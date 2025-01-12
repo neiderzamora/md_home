@@ -121,16 +121,21 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(doctor=self.request.user.doctoruser, service_request=service_request)
+        doctor_response = serializer.save(doctor=self.request.user.doctoruser, service_request=service_request)
         service_request.status = 'ACEPTADA Y EN CAMINO'
         service_request.save()
+
+        # Obtener la respuesta completa usando el serializer detallado
+        detailed_response = DoctorServiceResponseSerializer(doctor_response)
         
-        headers = self.get_success_headers(serializer.data)
-        return Response({
+        response_data = {
             'status': 'La solicitud de servicio ha sido aceptada',
             'message': 'El doctor ha aceptado la solicitud y está en camino',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED, headers=headers)
+            'data': detailed_response.data
+        }
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
 class DoctorServiceResponseListView(generics.ListAPIView):
     serializer_class = DoctorServiceResponseSerializer
@@ -191,17 +196,21 @@ class ServiceEndCreateView(generics.CreateAPIView):
         try:
             service_request = PatientServiceRequest.objects.get(pk=self.kwargs['pk'])
         except PatientServiceRequest.DoesNotExist:
-            return Response({'error': 'Ninguna solicitud de servicio coincide con la consulta proporcionada.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({
+                'error': 'Ninguna solicitud de servicio coincide con la consulta proporcionada.'
+            }, status=status.HTTP_404_NOT_FOUND)
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        # Guardamos explícitamente service_request
         service_end = serializer.save(service_request=service_request)
         
-        # Actualizar el estado de PatientServiceRequest a "COMPLETADA"
+        # Actualizamos el estado
         service_request.status = 'COMPLETADA'
         service_request.save()
         
-        # Crear una instancia de ServiceRequestDetail
+        # Creamos ServiceRequestDetail
         doctor_service_response = DoctorServiceResponse.objects.get(service_request=service_request)
         ServiceRequestDetail.objects.create(
             patient_service_request=service_request,
@@ -217,8 +226,8 @@ class ServiceEndCreateView(generics.CreateAPIView):
             'status': 'El servicio ha sido completado',
             'message': 'El servicio ha sido completado y los detalles han sido guardados',
             'data': serializer.data
-        }, status=status.HTTP_201_CREATED, headers=headers)
-        
+        }, status=status.HTTP_201_CREATED, headers=headers)      
+
 """ ServiceRequestDetail view """
 class PatientServiceRequestDListView(generics.ListAPIView):
     serializer_class = ServiceRequestDetailSerializer
