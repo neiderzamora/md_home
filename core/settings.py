@@ -201,3 +201,14 @@ SIMPLE_JWT = {
 
     "JTI_CLAIM": "jti",
 }
+
+# Configuración de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'neiderzamora09@gmail.com'  # Reemplaza con tu correo de Gmail
+EMAIL_HOST_PASSWORD = 'bkkp hmcn gdxe kdwn'    # Reemplaza con tu contraseña de Gmail
+
+# Opcional: Dirección desde la cual se enviarán los correos
+DEFAULT_FROM_EMAIL = 'mdhome <neiderzamora09@gmail.com>'

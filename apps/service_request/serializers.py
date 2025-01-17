@@ -48,6 +48,7 @@ class DoctorServiceResponseCreateSerializer(serializers.ModelSerializer):
         fields = ['doctor_latitude', 'doctor_longitude']
         
 class ServiceRequestDetailSerializer(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     patient_service_request = PatientServiceRequestSerializer()
     doctor_service_response = DoctorServiceResponseSerializer()
     service_end = ServiceEndSerializer()

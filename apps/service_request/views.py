@@ -15,7 +15,10 @@ from apps.service_request.models import PatientServiceRequest, DoctorServiceResp
 from apps.service_request.serializers import PatientServiceRequestSerializer, DoctorServiceResponseSerializer, DoctorServiceResponseCreateSerializer, ServiceEndSerializer, ServiceRequestDetailSerializer
 
 from apps.users.permissions import IsPatient, IsDoctor
+from apps.service_request.utils.email_templates import service_request_accepted_email, doctor_arrival_email, service_end_email
 from apps.service_request.filters import PatientServiceRequestFilter, DoctorServiceResponseFilter
+from django.core.mail import send_mail
+from django.conf import settings
 
 """ Patient view """
 def delete_unaccepted_request(service_request_id):
@@ -124,7 +127,24 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
         doctor_response = serializer.save(doctor=self.request.user.doctoruser, service_request=service_request)
         service_request.status = 'ACEPTADA Y EN CAMINO'
         service_request.save()
-
+        
+        # Obtener los componentes del correo desde el archivo de templates
+        email_data = service_request_accepted_email(self.request.user.doctoruser, service_request.patient)
+        
+        try:
+            send_mail(
+                subject=email_data['subject'],
+                message=email_data['message'],
+                from_email=email_data['sender'],
+                recipient_list=email_data['recipients'],
+                fail_silently=False
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al enviar el correo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         # Obtener la respuesta completa usando el serializer detallado
         detailed_response = DoctorServiceResponseSerializer(doctor_response)
         
@@ -170,6 +190,24 @@ class DoctorMarkArrivalView(generics.UpdateAPIView):
         
         service_request.status = 'LLEGADA AL DOMICILIO'
         service_request.save()
+        
+        # Enviar correo al paciente confirmando la llegada del doctor
+        email_data = doctor_arrival_email(request.user.doctoruser, service_request.patient)
+        
+        try:
+            send_mail(
+                subject=email_data['subject'],
+                message=email_data['message'],
+                from_email=email_data['sender'],
+                recipient_list=email_data['recipients'],
+                fail_silently=False
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al enviar el correo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         return Response({
             'status': 'El doctor ha llegado a la dirección',
             'message': f'El doctor {instance.doctor.first_name} {instance.doctor.last_name} ha llegado a la dirección',
@@ -221,6 +259,23 @@ class ServiceEndCreateView(generics.CreateAPIView):
             doctor=doctor_service_response.doctor
         )
         
+        # Enviar correo al paciente confirmando la finalización del servicio
+        email_data = service_end_email(doctor_service_response.doctor, service_request.patient)
+        
+        try:
+            send_mail(
+                subject=email_data['subject'],
+                message=email_data['message'],
+                from_email=email_data['sender'],
+                recipient_list=email_data['recipients'],
+                fail_silently=False
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al enviar el correo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
         headers = self.get_success_headers(serializer.data)
         return Response({
             'status': 'El servicio ha sido completado',
@@ -277,3 +332,20 @@ class PendingServiceRequestListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = PatientServiceRequestFilter
     pagination_class = PageNumberPagination
+    
+class PatientPendingServiceRequestListView(generics.ListAPIView):
+    """
+    Vista para listar todas las solicitudes de servicio del paciente autenticado con estado 'PENDIENTE'.
+    """
+    serializer_class = PatientServiceRequestSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsPatient]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PatientServiceRequestFilter
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        return PatientServiceRequest.objects.filter(
+            patient=self.request.user.patientuser,
+            status='PENDIENTE'
+        )

@@ -46,6 +46,7 @@ class ServiceRequestDetail(models.Model):
     location = models.ForeignKey(ServiceAddress, on_delete=models.CASCADE)
     patient = models.ForeignKey(PatientUser, on_delete=models.CASCADE)
     doctor = models.ForeignKey(DoctorUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"ServiceRequestDetail {self.id}"

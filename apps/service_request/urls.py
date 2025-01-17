@@ -16,7 +16,8 @@ from .views import (
     DoctorServiceResponseDView,
     DoctorServiceResponseDListView,
     
-    PendingServiceRequestListView
+    PendingServiceRequestListView,
+    PatientPendingServiceRequestListView,
 )
 
 urlpatterns = [
@@ -41,5 +42,9 @@ urlpatterns = [
     path('doctor/service_request/detail/', DoctorServiceResponseDListView.as_view(), name='list_doctor_service_response_detail'),
     path('doctor/service_request/detail/<uuid:pk>/', DoctorServiceResponseDView.as_view(), name='detail_doctor_service_response_detail'),
     
-     path('service_requests/pending/', PendingServiceRequestListView.as_view(), name='list_pending_service_requests'),
+    path('service_requests/pending/', PendingServiceRequestListView.as_view(), name='list_pending_service_requests'),
+    path('patient/service_request/pending/', 
+        PatientPendingServiceRequestListView.as_view(), 
+        name='patient_pending_service_requests'
+    ),
 ]
