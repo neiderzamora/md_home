@@ -18,6 +18,7 @@ from .views import (
     
     PendingServiceRequestListView,
     PatientPendingServiceRequestListView,
+    PatientNonPendingServiceRequestListView,
 )
 
 urlpatterns = [
@@ -46,5 +47,10 @@ urlpatterns = [
     path('patient/service_request/pending/', 
         PatientPendingServiceRequestListView.as_view(), 
         name='patient_pending_service_requests'
+    ),
+    path(
+        'patient/service_request/non_pending/',
+        PatientNonPendingServiceRequestListView.as_view(),
+        name='patient_non_pending_service_requests'
     ),
 ]

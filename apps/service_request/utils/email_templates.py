@@ -1,6 +1,6 @@
 from django.template.loader import render_to_string
 
-def service_request_accepted_email(doctor, patient):
+def service_request_accepted_email(doctor, patient, service_request_id):
     """
     Generates email components for an accepted service request.
 
@@ -13,7 +13,9 @@ def service_request_accepted_email(doctor, patient):
         f'Hola {patient.first_name},\n\n'
         f'El doctor {doctor.first_name} {doctor.last_name} ha aceptado tu solicitud de servicio y está en camino.\n\n'
         'El servicio llegara en un rango de una a tres horas.\n\n'
-        'Gracias por usar nuestro servicio.'
+        f'Para consultar el estado de su solicitud, haga clic aquí: '
+        f'http://localhost:3000/request-service/details/{service_request_id}\n\n'
+        'Gracias por confiar en nosotros.'
     )
     sender = 'mdhome <neiderzamora09@gmail.com>'
     recipients = [patient.email]
@@ -63,7 +65,7 @@ def service_end_email(doctor, patient):
         f'Hola {patient.first_name},\n\n'
         f'El doctor {doctor.first_name} {doctor.last_name} ha finalizado el servicio solicitado.\n\n'
         'Esperamos que hayas quedado satisfecho con nuestro servicio.\n\n'
-        'Gracias por confiar en nosotros.'
+        'Gracias por confiar en nosotros. '
     )
     sender = 'mdhome <neiderzamora09@gmail.com>'
     recipients = [patient.email]

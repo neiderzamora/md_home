@@ -129,7 +129,7 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
         service_request.save()
         
         # Obtener los componentes del correo desde el archivo de templates
-        email_data = service_request_accepted_email(self.request.user.doctoruser, service_request.patient)
+        email_data = service_request_accepted_email(self.request.user.doctoruser, service_request.patient, service_request.id)
         
         try:
             send_mail(
@@ -349,3 +349,21 @@ class PatientPendingServiceRequestListView(generics.ListAPIView):
             patient=self.request.user.patientuser,
             status='PENDIENTE'
         )
+
+class PatientNonPendingServiceRequestListView(generics.ListAPIView):
+    """
+    Vista para listar todas las solicitudes de servicio del paciente autenticado con estados diferentes a 'PENDIENTE'.
+    """
+    serializer_class = PatientServiceRequestSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsPatient]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PatientServiceRequestFilter
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        return PatientServiceRequest.objects.filter(
+            patient=self.request.user.patientuser
+        ).exclude(status__in=['PENDIENTE', 'COMPLETADA'])
+        
+        
