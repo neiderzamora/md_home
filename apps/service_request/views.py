@@ -10,6 +10,7 @@ import threading
 
 from apps.service_end.models import ServiceEnd
 from apps.users.models import PatientUser, DoctorUser
+from apps.vehicle.models import Vehicle
 from apps.service_request.models import PatientServiceRequest, DoctorServiceResponse, ServiceRequestDetail
 
 from apps.service_request.serializers import PatientServiceRequestSerializer, DoctorServiceResponseSerializer, DoctorServiceResponseCreateSerializer, ServiceEndSerializer, ServiceRequestDetailSerializer
@@ -112,15 +113,34 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
         if not hasattr(self.request.user, 'doctoruser'):
             return Response({'error': 'El usuario autenticado no es un doctor'}, status=status.HTTP_400_BAD_REQUEST)
         
+        # Verificar si el doctor tiene vehículos
+        doctor_vehicles = Vehicle.objects.filter(doctor_user=self.request.user.doctoruser)
+        if not doctor_vehicles.exists():
+            return Response(
+                {'error': 'El doctor debe tener al menos un vehículo registrado para aceptar solicitudes'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             service_request = PatientServiceRequest.objects.get(pk=self.kwargs['pk'])
         except PatientServiceRequest.DoesNotExist:
             return Response({'error': 'La solicitud de servicio no existe'}, status=status.HTTP_404_NOT_FOUND)
         
-        # Verificar si ya existe una respuesta para esta solicitud
-        existing_response = DoctorServiceResponse.objects.filter(service_request=service_request).first()
+        # Verificar si ya existe una respuesta
+        existing_response = DoctorServiceResponse.objects.filter(
+            service_request=service_request
+        ).first()
         if existing_response:
-            return Response({'error': 'Ya existe una respuesta para esta solicitud de servicio'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Ya existe una respuesta para esta solicitud de servicio'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Obtener el vehículo predeterminado o el primer vehículo disponible
+        vehicle = doctor_vehicles.filter(is_default=True).first() or doctor_vehicles.first()
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

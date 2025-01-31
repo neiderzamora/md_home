@@ -1,18 +1,29 @@
 from rest_framework import serializers
 import django_filters
+
 from apps.service_request.models import PatientServiceRequest, DoctorServiceResponse, ServiceRequestDetail
-from apps.service_end.models import ServiceEnd
+from apps.service_end.models import ServiceEnd, CIE10Code
 from apps.users.models import PatientUser, DoctorUser
-from apps.users.serializers import PatientUserSerializer, DoctorUserSerializer
+from apps.vehicle.models import Vehicle
 from apps.service_address.models import ServiceAddress
+
+from apps.vehicle.serializers import VehicleSerializer
+from apps.service_end.serializers import CIE10CodeSerializer
+from apps.users.serializers import PatientUserSerializer, DoctorUserSerializer
 from apps.service_address.serializers import ServiceAddressSerializer
 
 class ServiceEndSerializer(serializers.ModelSerializer):
-    end_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+    cie10_code_detail = CIE10CodeSerializer(source='cie10_code', read_only=True)
+    cie10_code_id = serializers.PrimaryKeyRelatedField(
+        queryset=CIE10Code.objects.all(),
+        source='cie10_code',
+        write_only=True
+    )
+    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     class Meta:
         model = ServiceEnd
         fields = '__all__'
-        read_only_fields = ['end_time', 'service_request']
+        read_only_fields = ['cie10_code', 'service_request', 'created_at']
 
 class PatientServiceRequestSerializer(serializers.ModelSerializer):
     patient = PatientUserSerializer(read_only=True)
@@ -30,7 +41,7 @@ class PatientServiceRequestSerializer(serializers.ModelSerializer):
 class DoctorServiceResponseSerializer(serializers.ModelSerializer):
     doctor = DoctorUserSerializer()
     service_request = PatientServiceRequestSerializer()
-    #service_end = ServiceEndSerializer()
+    vehicle = VehicleSerializer()
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     created_at_gte = django_filters.DateFilter(field_name='created_at', lookup_expr='gte', input_formats=['%d/%m/%Y'])
     created_at_lte = django_filters.DateFilter(field_name='created_at', lookup_expr='lte', input_formats=['%d/%m/%Y'])
@@ -45,7 +56,7 @@ class DoctorServiceResponseCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DoctorServiceResponse
-        fields = ['doctor_latitude', 'doctor_longitude']
+        fields = ['vehicle', 'doctor_latitude', 'doctor_longitude']
         
 class ServiceRequestDetailSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)

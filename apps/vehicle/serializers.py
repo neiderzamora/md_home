@@ -9,5 +9,11 @@ class VehicleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Vehicle
-        fields = ['id', 'plate', 'brand', 'color', 'doctor_user']
+        fields = ['id', 'plate', 'brand', 'color']
         read_only_fields = ['id', 'doctor_user']
+    
+    def validate(self, data):
+        if data.get('is_default', False):
+            # Asegurarse de que solo un vehículo sea predeterminado por usuario
+            Vehicle.objects.filter(doctor_user=self.context['request'].user, is_default=True).update(is_default=False)
+        return data
