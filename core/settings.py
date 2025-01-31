@@ -66,7 +66,7 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://mdhome-front-holf-f2e48qmpc-neiders-projects.vercel.app/",
+    "https://mdhome-front-holf-f2e48qmpc-neiders-projects.vercel.app",
 )
 
 #CORS_ALLOW_CREDENTIALS = True
