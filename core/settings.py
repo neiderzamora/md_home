@@ -143,7 +143,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
     'default': dj_database_url.config(default=env('DATABASE_MYSQL'))
 } """
 
-DATABASE = {
+DATABASES = {
     'default': dj_database_url.config(
     default='sqlite:///db.sqlite3',
     conn_max_age=600    
