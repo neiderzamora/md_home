@@ -15,20 +15,8 @@ from apps.users.permissions import IsPatient, IsDoctor
 class BaseUserViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        if self.action in ['destroy', 'update', 'partial_update', 'list', 'retrieve']:
-            return [IsAuthenticated()]
-        return super().get_permissions()
-    
-    def destroy(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
-            return Response({'error': 'No tiene permiso para eliminar usuarios'}, status=status.HTTP_403_FORBIDDEN)
-        return super().destroy(request, *args, **kwargs)
 
-    """ def get_permissions(self):
+    def get_permissions(self):
         if self.action == 'create':
             return [AllowAny()]
         if self.action == 'destroy':
@@ -38,12 +26,12 @@ class BaseUserViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         if not request.user.is_superuser:
             return Response({'error': 'No tiene permiso para eliminar usuarios'}, status=status.HTTP_403_FORBIDDEN)
-        return super().destroy(request, *args, **kwargs) """
+        return super().destroy(request, *args, **kwargs)
 
 class PatientUserViewSet(BaseUserViewSet):
     queryset = PatientUser.objects.all()
     serializer_class = PatientUserSerializer
-    #permission_classes = [IsAuthenticated, IsPatient | IsAdminUser]
+    permission_classes = [IsAuthenticated, IsPatient | IsAdminUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['id', 'email']
     pagination_class = None
@@ -51,7 +39,7 @@ class PatientUserViewSet(BaseUserViewSet):
 class DoctorUserViewSet(BaseUserViewSet):
     queryset = DoctorUser.objects.all()
     serializer_class = DoctorUserSerializer
-    #permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
+    permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['id', 'email']
     pagination_class = None
