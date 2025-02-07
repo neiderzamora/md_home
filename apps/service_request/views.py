@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
@@ -110,47 +111,44 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
 
     def create(self, request, *args, **kwargs):
-        if not hasattr(self.request.user, 'doctoruser'):
-            return Response({'error': 'El usuario autenticado no es un doctor'}, status=status.HTTP_400_BAD_REQUEST)
+        # Validar que el usuario sea doctor
+        doctoruser = getattr(request.user, 'doctoruser', None)
+        if not doctoruser:
+            return Response({'error': 'El usuario autenticado no es un doctor'},
+                            status=status.HTTP_400_BAD_REQUEST)
         
         # Verificar si el doctor tiene vehículos
-        doctor_vehicles = Vehicle.objects.filter(doctor_user=self.request.user.doctoruser)
+        doctor_vehicles = Vehicle.objects.filter(doctor_user=doctoruser)
         if not doctor_vehicles.exists():
-            return Response(
-                {'error': 'El doctor debe tener al menos un vehículo registrado para aceptar solicitudes'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'El doctor debe tener al menos un vehículo registrado para aceptar solicitudes'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
+        # Obtener la solicitud de servicio
         try:
             service_request = PatientServiceRequest.objects.get(pk=self.kwargs['pk'])
         except PatientServiceRequest.DoesNotExist:
-            return Response({'error': 'La solicitud de servicio no existe'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Verificar si ya existe una respuesta
-        existing_response = DoctorServiceResponse.objects.filter(
-            service_request=service_request
-        ).first()
-        if existing_response:
-            return Response(
-                {'error': 'Ya existe una respuesta para esta solicitud de servicio'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Obtener el vehículo predeterminado o el primer vehículo disponible
+            return Response({'error': 'La solicitud de servicio no existe'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        # Verificar si ya existe una respuesta para la solicitud
+        if DoctorServiceResponse.objects.filter(service_request=service_request).exists():
+            return Response({'error': 'Ya existe una respuesta para esta solicitud de servicio'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Seleccionar el vehículo predeterminado o el primero disponible
         vehicle = doctor_vehicles.filter(is_default=True).first() or doctor_vehicles.first()
-        
+
+        # Validar y guardar la respuesta del doctor
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        doctor_response = serializer.save(doctor=doctoruser, service_request=service_request)
         
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        doctor_response = serializer.save(doctor=self.request.user.doctoruser, service_request=service_request)
+        # Actualizar el estado de la solicitud
         service_request.status = 'ACEPTADA Y EN CAMINO'
         service_request.save()
-        
-        # Obtener los componentes del correo desde el archivo de templates
-        email_data = service_request_accepted_email(self.request.user.doctoruser, service_request.patient, service_request.id)
-        
+
+        # Enviar correo de notificación
+        email_data = service_request_accepted_email(doctoruser, service_request.patient, service_request.id)
         try:
             send_mail(
                 subject=email_data['subject'],
@@ -160,23 +158,19 @@ class DoctorServiceResponseCreateView(generics.CreateAPIView):
                 fail_silently=False
             )
         except Exception as e:
-            return Response(
-                {'error': f'Error al enviar el correo: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        # Obtener la respuesta completa usando el serializer detallado
+            return Response({'error': f'Error al enviar el correo: {str(e)}'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Preparar y enviar la respuesta
         detailed_response = DoctorServiceResponseSerializer(doctor_response)
-        
+        headers = self.get_success_headers(serializer.data)
         response_data = {
             'status': 'La solicitud de servicio ha sido aceptada',
             'message': 'El doctor ha aceptado la solicitud y está en camino',
             'data': detailed_response.data
         }
-        
-        headers = self.get_success_headers(serializer.data)
         return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
-
+    
 class DoctorServiceResponseListView(generics.ListAPIView):
     serializer_class = DoctorServiceResponseSerializer
     authentication_classes = [JWTAuthentication]
@@ -242,6 +236,41 @@ class DoctorServiceResponseDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return DoctorServiceResponse.objects.filter(doctor=self.request.user)
+
+class DoctorLocationUpdateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsDoctor | IsAdminUser]
+
+    def patch(self, request, *args, **kwargs):
+        doctor = request.user.doctoruser
+        latitude = request.data.get('doctor_latitude')
+        longitude = request.data.get('doctor_longitude')
+        
+        if latitude is None or longitude is None:
+            return Response({'error': 'Se requiere la latitud y longitud del doctor'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find an active service response (for example, one with a service_request status of "ACEPTADA Y EN CAMINO" or "LLEGADA AL DOMICILIO")
+        try:
+            doctor_response = DoctorServiceResponse.objects.filter(
+                doctor=doctor,
+                service_request__status__in=['ACEPTADA Y EN CAMINO', 'LLEGADA AL DOMICILIO']
+            ).latest('created_at')
+        except DoctorServiceResponse.DoesNotExist:
+            return Response({'error': 'No se encontró una respuesta de servicio activa para este doctor.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            doctor_response.doctor_latitude = float(latitude)
+            doctor_response.doctor_longitude = float(longitude)
+            doctor_response.save(update_fields=['doctor_latitude', 'doctor_longitude'])
+        except ValueError:
+            return Response({'error': 'Coordenadas inválidas.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': 'Ubicación actualizada correctamente',
+            'doctor_latitude': doctor_response.doctor_latitude,
+            'doctor_longitude': doctor_response.doctor_longitude
+        }, status=status.HTTP_200_OK)
+            
 
 """ Service_end view """
 class ServiceEndCreateView(generics.CreateAPIView):

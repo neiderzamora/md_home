@@ -10,6 +10,8 @@ class ServiceAddress(models.Model):
     neighborhood = models.CharField(max_length=256, null=False, blank=False)
     line_address = models.CharField(max_length=256, null=False, blank=False)
     description = models.TextField(max_length=256, null=False, blank=False)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_default = models.BooleanField(default=False)
 
