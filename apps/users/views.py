@@ -14,7 +14,6 @@ from apps.users.permissions import IsPatient, IsDoctor
 
 class BaseUserViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         if self.action == 'create':
